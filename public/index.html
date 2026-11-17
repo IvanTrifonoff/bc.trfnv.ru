@@ -33,11 +33,20 @@
           <span>Справочник патронов</span>
           <select id="cartridgeSelect"></select>
         </label>
+        <label class="field">
+          <span>Модель сопротивления</span>
+          <select id="dragModel">
+            <option value="G1">G1 (плоскодонные пули)</option>
+            <option value="G7">G7 (боттейл/спитцер)</option>
+          </select>
+        </label>
         <div class="grid-2">
           <label class="field"><span>Масса пули, г</span><input id="bulletWeightG" type="number" step="0.01" min="0" /></label>
           <label class="field"><span>Калибр, мм</span><input id="caliberMm" type="number" step="0.01" min="0" /></label>
           <label class="field"><span>BC G1, lb/in²</span><input id="bc" type="number" step="0.001" min="0" /></label>
+          <label class="field"><span>BC G7, lb/in²</span><input id="bcG7" type="number" step="0.001" min="0" /></label>
           <label class="field"><span>Нач. скорость, м/с</span><input id="muzzleVelocity" type="number" step="1" min="0" /></label>
+          <label class="field"><span>Цена щелчка, мрад</span><input id="clickMrad" type="number" step="0.01" min="0.001" /></label>
         </div>
         <button id="addCartridgeBtn" class="btn btn-small">+ Своя пуля</button>
 
@@ -110,6 +119,7 @@
           <label class="field"><span>Масса, г</span><input name="weight" type="number" step="0.01" value="2.59" required /></label>
           <label class="field"><span>Калибр, мм</span><input name="caliber" type="number" step="0.01" value="5.56" required /></label>
           <label class="field"><span>BC G1</span><input name="bc" type="number" step="0.001" value="0.112" required /></label>
+          <label class="field"><span>BC G7</span><input name="bc7" type="number" step="0.001" value="0.063" required /></label>
           <label class="field"><span>Скорость, м/с</span><input name="velocity" type="number" step="1" value="326" required /></label>
         </div>
         <div class="dialog-actions">

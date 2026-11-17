@@ -1,18 +1,102 @@
 {
   "cartridges": [
-    { "id": "cci-sv", "name": "CCI Standard Velocity .22 LR", "bulletWeightG": 2.59, "caliberMm": 5.56, "bc": 0.112, "muzzleVelocity": 326 },
-    { "id": "cci-mm", "name": "CCI Mini Mag .22 LR", "bulletWeightG": 2.59, "caliberMm": 5.56, "bc": 0.12, "muzzleVelocity": 376 },
-    { "id": "federal-champion", "name": "Federal Champion .22 LR", "bulletWeightG": 2.33, "caliberMm": 5.56, "bc": 0.105, "muzzleVelocity": 347 },
-    { "id": "win-sx", "name": "Winchester Super-X .22 LR", "bulletWeightG": 2.59, "caliberMm": 5.56, "bc": 0.118, "muzzleVelocity": 370 },
-    { "id": "aguila-sub", "name": "Aguila Subsonic .22 LR", "bulletWeightG": 2.59, "caliberMm": 5.56, "bc": 0.115, "muzzleVelocity": 290 },
-    { "id": "eley-tenex", "name": "Eley Tenex .22 LR", "bulletWeightG": 2.59, "caliberMm": 5.56, "bc": 0.13, "muzzleVelocity": 320 },
-    { "id": "lapua-midas", "name": "Lapua Midas+ .22 LR", "bulletWeightG": 2.59, "caliberMm": 5.56, "bc": 0.132, "muzzleVelocity": 315 },
-    { "id": "sb-22lr", "name": "Sellier & Bellot .22 LR", "bulletWeightG": 2.59, "caliberMm": 5.56, "bc": 0.118, "muzzleVelocity": 330 }
+    {
+      "id": "cci-sv",
+      "name": "CCI Standard Velocity .22 LR",
+      "bulletWeightG": 2.59,
+      "caliberMm": 5.56,
+      "bc": 0.112,
+      "muzzleVelocity": 326,
+      "bcG7": 0.0628
+    },
+    {
+      "id": "cci-mm",
+      "name": "CCI Mini Mag .22 LR",
+      "bulletWeightG": 2.59,
+      "caliberMm": 5.56,
+      "bc": 0.12,
+      "muzzleVelocity": 376,
+      "bcG7": 0.0813
+    },
+    {
+      "id": "federal-champion",
+      "name": "Federal Champion .22 LR",
+      "bulletWeightG": 2.33,
+      "caliberMm": 5.56,
+      "bc": 0.105,
+      "muzzleVelocity": 347,
+      "bcG7": 0.0823
+    },
+    {
+      "id": "win-sx",
+      "name": "Winchester Super-X .22 LR",
+      "bulletWeightG": 2.59,
+      "caliberMm": 5.56,
+      "bc": 0.118,
+      "muzzleVelocity": 370,
+      "bcG7": 0.0822
+    },
+    {
+      "id": "aguila-sub",
+      "name": "Aguila Subsonic .22 LR",
+      "bulletWeightG": 2.59,
+      "caliberMm": 5.56,
+      "bc": 0.115,
+      "muzzleVelocity": 290,
+      "bcG7": 0.0516
+    },
+    {
+      "id": "eley-tenex",
+      "name": "Eley Tenex .22 LR",
+      "bulletWeightG": 2.59,
+      "caliberMm": 5.56,
+      "bc": 0.13,
+      "muzzleVelocity": 320,
+      "bcG7": 0.0626
+    },
+    {
+      "id": "lapua-midas",
+      "name": "Lapua Midas+ .22 LR",
+      "bulletWeightG": 2.59,
+      "caliberMm": 5.56,
+      "bc": 0.132,
+      "muzzleVelocity": 315,
+      "bcG7": 0.0589
+    },
+    {
+      "id": "sb-22lr",
+      "name": "Sellier & Bellot .22 LR",
+      "bulletWeightG": 2.59,
+      "caliberMm": 5.56,
+      "bc": 0.118,
+      "muzzleVelocity": 330,
+      "bcG7": 0.0755
+    }
   ],
   "rifles": [
-    { "id": "r22-optic", "name": ".22LR с оптикой (высота 25 мм)", "sightHeightMm": 25, "zeroRange": 50 },
-    { "id": "r22-open", "name": ".22LR с открытым прицелом (12 мм)", "sightHeightMm": 12, "zeroRange": 50 },
-    { "id": "ruger-1022", "name": "Ruger 10/22 + оптика (38 мм)", "sightHeightMm": 38, "zeroRange": 50 },
-    { "id": "cz-452", "name": "CZ 452 + оптика (30 мм)", "sightHeightMm": 30, "zeroRange": 50 }
+    {
+      "id": "r22-optic",
+      "name": ".22LR с оптикой (высота 25 мм)",
+      "sightHeightMm": 25,
+      "zeroRange": 50
+    },
+    {
+      "id": "r22-open",
+      "name": ".22LR с открытым прицелом (12 мм)",
+      "sightHeightMm": 12,
+      "zeroRange": 50
+    },
+    {
+      "id": "ruger-1022",
+      "name": "Ruger 10/22 + оптика (38 мм)",
+      "sightHeightMm": 38,
+      "zeroRange": 50
+    },
+    {
+      "id": "cz-452",
+      "name": "CZ 452 + оптика (30 мм)",
+      "sightHeightMm": 30,
+      "zeroRange": 50
+    }
   ]
 }

@@ -1,37 +1,15 @@
 /**
- * Баллистический движок: модель точечной массы, кривая сопротивления G1.
+ * Баллистический движок: модель точечной массы, кривые сопротивления G1/G7.
  * Интегрирование методом Рунге-Кутты 4-го порядка.
  * Все единицы СИ: м, с, кг, Па.
  */
 
+import { G1, G7 } from './drag-tables.js';
+
 export const GRAVITY = 9.80665;
 export const LB_IN2_TO_KG_M2 = 703.069579;
 
-// Приближение кривой G1: коэффициент лобового сопротивления Cd по числу Маха.
-// Значения согласованы с классическими таблицами Ingalls/G1 для sporting bullets.
-const G1_CD = [
-  [0.00, 0.00],
-  [0.10, 0.22],
-  [0.20, 0.27],
-  [0.30, 0.31],
-  [0.40, 0.34],
-  [0.50, 0.37],
-  [0.60, 0.40],
-  [0.70, 0.44],
-  [0.80, 0.50],
-  [0.90, 0.62],
-  [1.00, 0.72],
-  [1.10, 0.76],
-  [1.20, 0.75],
-  [1.30, 0.71],
-  [1.50, 0.64],
-  [1.75, 0.57],
-  [2.00, 0.52],
-  [2.50, 0.45],
-  [3.00, 0.40],
-  [4.00, 0.34],
-  [5.00, 0.30],
-];
+const TABLES = { G1, G7 };
 
 export function speedOfSound(tempC) {
   return Math.sqrt(1.4 * 287.053 * (tempC + 273.15));
@@ -47,18 +25,18 @@ export function airDensity(tempC, pressureHpa, humidityPct) {
   return pDry / (287.053 * tK) + pVap / (461.52 * tK);
 }
 
-function cdG1(mach) {
-  if (mach <= 0) return 0;
-  if (mach >= G1_CD[G1_CD.length - 1][0]) return G1_CD[G1_CD.length - 1][1];
-  for (let i = 1; i < G1_CD.length; i++) {
-    const [m1, c1] = G1_CD[i];
+function cdFromTable(table, mach) {
+  if (mach <= 0) return table[0][1];
+  if (mach >= table[table.length - 1][0]) return table[table.length - 1][1];
+  for (let i = 1; i < table.length; i++) {
+    const [m1, c1] = table[i];
     if (mach <= m1) {
-      const [m0, c0] = G1_CD[i - 1];
+      const [m0, c0] = table[i - 1];
       const f = (mach - m0) / (m1 - m0);
       return c0 + (c1 - c0) * f;
     }
   }
-  return 0.3;
+  return table[table.length - 1][1];
 }
 
 /** Коэффициент формы относительно эталонной пули G1. */
@@ -74,6 +52,7 @@ function buildParams(input) {
     bulletWeightG,
     caliberMm,
     bc,
+    dragModel = 'G1',
     muzzleVelocity,
     sightHeightMm,
     tempC = 15,
@@ -88,6 +67,7 @@ function buildParams(input) {
   const d = caliberMm / 1000;
   const area = (Math.PI * d * d) / 4;
   const i = formFactor(bulletWeightG, caliberMm, bc);
+  const table = TABLES[dragModel] || G1;
   const rho = airDensity(tempC, pressureHpa, humidityPct);
   const sound = speedOfSound(tempC);
   const wRad = (windFromDeg * Math.PI) / 180;
@@ -102,6 +82,7 @@ function buildParams(input) {
     massKg,
     area,
     i,
+    table,
     rho,
     sound,
     wx,
@@ -117,7 +98,7 @@ function deriv(s, p) {
   const rvy = s.vy;
   const rvz = s.vz - p.wz;
   const rv = Math.hypot(rvx, rvy, rvz) || 1e-9;
-  const cd = p.i * cdG1(rv / p.sound);
+  const cd = p.i * cdFromTable(p.table, rv / p.sound);
   const k = (0.5 * p.rho * cd * p.area * rv) / p.massKg;
   return {
     x: s.vx,
@@ -250,6 +231,7 @@ export function calculate(input) {
     rho: p.rho,
     sound: p.sound,
     bc: input.bc,
+    dragModel: TABLES[input.dragModel] ? input.dragModel : 'G1',
     ballisticCoefficientSi: input.bc * LB_IN2_TO_KG_M2,
     formFactor: p.i,
   };

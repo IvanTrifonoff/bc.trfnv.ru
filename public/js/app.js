@@ -15,7 +15,10 @@ const DEFAULT_STATE = {
   bulletWeightG: 2.59,
   caliberMm: 5.56,
   bc: 0.112,
+  bcG7: 0.063,
+  dragModel: 'G1',
   muzzleVelocity: 326,
+  clickMrad: 0.1,
   rifleId: '',
   sightHeightMm: 25,
   zeroRange: 50,
@@ -29,7 +32,7 @@ const DEFAULT_STATE = {
 };
 
 const NUMERIC_FIELDS = [
-  'bulletWeightG', 'caliberMm', 'bc', 'muzzleVelocity',
+  'bulletWeightG', 'caliberMm', 'bc', 'bcG7', 'muzzleVelocity', 'clickMrad',
   'sightHeightMm', 'zeroRange', 'tempC', 'pressureHpa',
   'humidityPct', 'windSpeed', 'windFromDeg', 'elevationDeg',
 ];
@@ -52,6 +55,9 @@ function applyState(state) {
   fill('bulletWeightG', s.bulletWeightG);
   fill('caliberMm', s.caliberMm);
   fill('bc', s.bc);
+  fill('bcG7', s.bcG7);
+  fill('clickMrad', s.clickMrad);
+  $('dragModel').value = s.dragModel || 'G1';
   fill('muzzleVelocity', s.muzzleVelocity);
   fill('sightHeightMm', s.sightHeightMm);
   fill('zeroRange', s.zeroRange);
@@ -67,7 +73,11 @@ function applyState(state) {
 }
 
 function collectState() {
-  const state = { cartridgeId: $('cartridgeId').value, rifleId: $('rifleId').value };
+  const state = {
+    cartridgeId: $('cartridgeId').value,
+    rifleId: $('rifleId').value,
+    dragModel: $('dragModel').value,
+  };
   for (const f of NUMERIC_FIELDS) {
     const id = f === 'cartridgeId' || f === 'rifleId' ? f : f;
     state[f] = num(id, DEFAULT_STATE[f]);
@@ -125,6 +135,7 @@ function applyCartridge(id) {
   fill('bulletWeightG', c.bulletWeightG);
   fill('caliberMm', c.caliberMm);
   fill('bc', c.bc);
+  fill('bcG7', c.bcG7 ?? c.bc);
   fill('muzzleVelocity', c.muzzleVelocity);
   $('cartridgeId').value = id;
 }
@@ -148,6 +159,7 @@ function renderSummary(result, state) {
     { label: 'Энергия у дула', value: fmt(0.5 * (state.bulletWeightG / 1000) * state.muzzleVelocity ** 2, 0) + ' Дж', hint: '' },
     { label: 'Скорость на ' + fmt(last.range, 0) + ' м', value: fmt(last.velocity, 0) + ' м/с', hint: 'число Маха ' + fmt(last.mach, 2) },
     { label: 'Плотность воздуха', value: fmt(result.rho, 3) + ' кг/м³', hint: 'звук ' + fmt(result.sound, 0) + ' м/с' },
+    { label: 'Модель / BC', value: result.dragModel + ' ' + fmt(result.bc, 3), hint: 'коэффициент формы ' + fmt(result.formFactor, 2) },
   ];
   $('summaryCards').innerHTML = cards
     .map(
@@ -159,17 +171,19 @@ function renderSummary(result, state) {
     .join('');
 }
 
-function renderTable(result) {
+function renderTable(result, clickMrad) {
   const head =
     '<thead><tr><th>Дальность, м</th><th>Скорость, м/с</th><th>Энергия, Дж</th>' +
-    '<th>Падение, мм</th><th>Снос, мм</th><th>Время, с</th><th>Поправка, мрад</th></tr></thead>';
+    '<th>Падение, мм</th><th>Снос, мм</th><th>Время, с</th><th>Поправка, мрад</th>' +
+    '<th>Клики в/г</th></tr></thead>';
   const rows = result.samples
     .map(
       (s) =>
         `<tr><td>${fmt(s.range, 0)}</td><td>${fmt(s.velocity, 0)}</td>` +
         `<td>${fmt(s.energy, 0)}</td><td class="${s.dropMm > 0 ? 'down' : 'up'}">${fmt(s.dropMm)}</td>` +
         `<td class="${s.windageMm > 0 ? 'right' : 'left'}">${fmt(s.windageMm)}</td>` +
-        `<td>${fmt(s.time, 3)}</td><td>${fmt(s.dropMrad, 2)} / ${fmt(s.windageMrad, 2)}</td></tr>`,
+        `<td>${fmt(s.time, 3)}</td><td>${fmt(s.dropMrad, 2)} / ${fmt(s.windageMrad, 2)}</td>` +
+        `<td>${fmt(s.dropMrad / clickMrad, 0)} / ${fmt(s.windageMrad / clickMrad, 0)}</td></tr>`,
     )
     .join('');
   $('resultTable').innerHTML = head + '<tbody>' + rows + '</tbody>';
@@ -182,9 +196,10 @@ function calculateAndRender() {
     $('errorBox').textContent = 'Дистанция пристрелки должна быть больше нуля.';
     return;
   }
-  if (state.bulletWeightG <= 0 || state.caliberMm <= 0 || state.bc <= 0 || state.muzzleVelocity <= 0) {
+  const activeBc = state.dragModel === 'G7' ? state.bcG7 : state.bc;
+  if (state.bulletWeightG <= 0 || state.caliberMm <= 0 || activeBc <= 0 || state.muzzleVelocity <= 0 || state.clickMrad <= 0) {
     $('errorBox').hidden = false;
-    $('errorBox').textContent = 'Проверьте параметры патрона: всё должно быть больше нуля.';
+    $('errorBox').textContent = 'Проверьте параметры патрона и цену щелчка: всё должно быть больше нуля.';
     return;
   }
   $('errorBox').hidden = true;
@@ -192,7 +207,8 @@ function calculateAndRender() {
   const result = calculate({
     bulletWeightG: state.bulletWeightG,
     caliberMm: state.caliberMm,
-    bc: state.bc,
+    bc: activeBc,
+    dragModel: state.dragModel,
     muzzleVelocity: state.muzzleVelocity,
     sightHeightMm: state.sightHeightMm,
     zeroRange: state.zeroRange,
@@ -205,7 +221,7 @@ function calculateAndRender() {
     ranges: state.ranges,
   });
   renderSummary(result, state);
-  renderTable(result);
+  renderTable(result, state.clickMrad);
   if (chart) chart.setData(result);
   persist();
 }
@@ -251,9 +267,10 @@ function bindDialogs() {
       bulletWeightG: parseFloat(f.get('weight')),
       caliberMm: parseFloat(f.get('caliber')),
       bc: parseFloat(f.get('bc')),
+      bcG7: parseFloat(f.get('bc7')),
       muzzleVelocity: parseFloat(f.get('velocity')),
     };
-    if (!item.name || [item.bulletWeightG, item.caliberMm, item.bc, item.muzzleVelocity].some((v) => !Number.isFinite(v) || v <= 0)) return;
+    if (!item.name || [item.bulletWeightG, item.caliberMm, item.bc, item.bcG7, item.muzzleVelocity].some((v) => !Number.isFinite(v) || v <= 0)) return;
     const saved = addCustomCartridge(item);
     applyCartridge(saved.id);
     const state = collectState();
@@ -299,7 +316,7 @@ function bindEvents() {
     applyRifle(e.target.value);
     calculateAndRender();
   });
-  const cartridgeFields = ['bulletWeightG', 'caliberMm', 'bc', 'muzzleVelocity'];
+  const cartridgeFields = ['bulletWeightG', 'caliberMm', 'bc', 'bcG7', 'muzzleVelocity'];
   const rifleFields = ['sightHeightMm', 'zeroRange'];
   for (const f of NUMERIC_FIELDS) {
     $(f).addEventListener('input', () => {
@@ -315,6 +332,7 @@ function bindEvents() {
     });
   }
   $('ranges').addEventListener('input', calculateAndRender);
+  $('dragModel').addEventListener('change', calculateAndRender);
   $('calcBtn').addEventListener('click', calculateAndRender);
   $('exportBtn').addEventListener('click', exportCsv);
   $('resetBtn').addEventListener('click', () => {

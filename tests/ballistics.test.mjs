@@ -44,6 +44,17 @@ test('боковой ветер вызывает снос вправо', () => {
   assert.ok(at100.windageMm > 0, `windage = ${at100.windageMm}`);
 });
 
+test('G7 с пересчитанным BC даёт близкую траекторию к G1', () => {
+  const g1 = calculate({ ...base, dragModel: 'G1', bc: 0.112 });
+  const g7 = calculate({ ...base, dragModel: 'G7', bc: 0.063 });
+  const a = g1.samples.find((s) => s.range === 100);
+  const b = g7.samples.find((s) => s.range === 100);
+  assert.ok(Math.abs(a.dropMm - b.dropMm) < 120, `${a.dropMm} vs ${b.dropMm}`);
+  assert.ok(Math.abs(a.velocity - b.velocity) < 25, `${a.velocity} vs ${b.velocity}`);
+  assert.equal(g1.dragModel, 'G1');
+  assert.equal(g7.dragModel, 'G7');
+});
+
 test('высота прицела увеличивает угол прицеливания', () => {
   const low = calculate({ ...base, sightHeightMm: 10 });
   const high = calculate({ ...base, sightHeightMm: 50 });

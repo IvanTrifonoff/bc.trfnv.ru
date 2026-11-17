@@ -65,7 +65,7 @@ test('runtime: приложение инициализируется и стро
   assert.equal(rows.length, 5, 'ожидается 5 строк таблицы');
   assert.match(rows[0].textContent, /10/);
   assert.match(rows[4].textContent, /100/);
-  assert.equal(doc.querySelectorAll('#summaryCards .card').length, 4);
+  assert.equal(doc.querySelectorAll('#summaryCards .card').length, 5);
   assert.equal(doc.querySelectorAll('#cartridgeSelect option').length, 9);
   assert.equal(doc.querySelectorAll('#rifleSelect option').length, 5);
   assert.match(doc.getElementById('statusBadge').textContent, /Онлайн/);
