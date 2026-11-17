@@ -218,8 +218,9 @@ export function calculate(input) {
       velocity: s.v,
       energy: 0.5 * massKg * s.v * s.v,
       time: s.t,
-      dropMrad: -s.y / safeRange,
-      windageMrad: s.z / safeRange,
+      // 1 мрад ≈ 1 мм на 1 м: переводим отношение в миллирадианы (×1000).
+      dropMrad: (-s.y / safeRange) * 1000,
+      windageMrad: (s.z / safeRange) * 1000,
       mach: s.v / p.sound,
     };
   });

@@ -9,6 +9,7 @@ import {
   deleteCustom,
 } from './storage.js';
 import { createTrajectoryChart } from './chart.js';
+import { createReticle } from './reticle.js';
 
 const DEFAULT_STATE = {
   cartridgeId: '',
@@ -39,6 +40,7 @@ const NUMERIC_FIELDS = [
 
 const $ = (id) => document.getElementById(id);
 let chart = null;
+let reticle = null;
 let deferredInstall = null;
 
 function num(id, fallback) {
@@ -143,8 +145,8 @@ function applyCartridge(id) {
 function applyRifle(id) {
   const r = findRifle(id) || loadCustom().rifles.find((x) => x.id === id);
   if (!r) return;
+  // Дистанция пристрелки — параметр стрелка; выбор винтовки её не перезаписывает.
   fill('sightHeightMm', r.sightHeightMm);
-  fill('zeroRange', r.zeroRange);
   $('rifleId').value = id;
 }
 
@@ -179,11 +181,14 @@ function renderTable(result, clickMrad) {
   const rows = result.samples
     .map(
       (s) =>
-        `<tr><td>${fmt(s.range, 0)}</td><td>${fmt(s.velocity, 0)}</td>` +
-        `<td>${fmt(s.energy, 0)}</td><td class="${s.dropMm > 0 ? 'down' : 'up'}">${fmt(s.dropMm)}</td>` +
-        `<td class="${s.windageMm > 0 ? 'right' : 'left'}">${fmt(s.windageMm)}</td>` +
-        `<td>${fmt(s.time, 3)}</td><td>${fmt(s.dropMrad, 2)} / ${fmt(s.windageMrad, 2)}</td>` +
-        `<td>${fmt(s.dropMrad / clickMrad, 0)} / ${fmt(s.windageMrad / clickMrad, 0)}</td></tr>`,
+        `<tr><td data-label="Дальность, м">${fmt(s.range, 0)}</td>` +
+        `<td data-label="Скорость, м/с">${fmt(s.velocity, 0)}</td>` +
+        `<td data-label="Энергия, Дж">${fmt(s.energy, 0)}</td>` +
+        `<td data-label="Падение, мм" class="${s.dropMm > 0 ? 'down' : 'up'}">${fmt(s.dropMm)}</td>` +
+        `<td data-label="Снос, мм" class="${s.windageMm > 0 ? 'right' : 'left'}">${fmt(s.windageMm)}</td>` +
+        `<td data-label="Время, с">${fmt(s.time, 3)}</td>` +
+        `<td data-label="Поправка, мрад">${fmt(s.dropMrad, 2)} / ${fmt(s.windageMrad, 2)}</td>` +
+        `<td data-label="Клики в/г">${fmt(s.dropMrad / clickMrad, 0)} / ${fmt(s.windageMrad / clickMrad, 0)}</td></tr>`,
     )
     .join('');
   $('resultTable').innerHTML = head + '<tbody>' + rows + '</tbody>';
@@ -223,6 +228,26 @@ function calculateAndRender() {
   renderSummary(result, state);
   renderTable(result, state.clickMrad);
   if (chart) chart.setData(result);
+
+  const rangeSelect = $('reticleRange');
+  const previous = rangeSelect.value;
+  rangeSelect.innerHTML = '';
+  for (const s of result.samples) {
+    const opt = document.createElement('option');
+    opt.value = String(s.range);
+    opt.textContent = fmt(s.range, 0) + ' м';
+    rangeSelect.appendChild(opt);
+  }
+  const keep = result.samples.some((s) => String(s.range) === previous);
+  rangeSelect.value = keep ? previous : String(result.samples[result.samples.length - 1].range);
+  if (reticle) {
+    reticle.setData(result.samples, state);
+    reticle.setRange(parseFloat(rangeSelect.value));
+    reticle.setOptions({
+      reticleType: $('reticleType').value,
+      targetCm: parseFloat($('targetSizeCm').value),
+    });
+  }
   persist();
 }
 
@@ -288,9 +313,8 @@ function bindDialogs() {
     const item = {
       name: f.get('name').trim(),
       sightHeightMm: parseFloat(f.get('sight')),
-      zeroRange: parseFloat(f.get('zero')),
     };
-    if (!item.name || !Number.isFinite(item.sightHeightMm) || !Number.isFinite(item.zeroRange)) return;
+    if (!item.name || !Number.isFinite(item.sightHeightMm) || item.sightHeightMm < 0) return;
     const saved = addCustomRifle(item);
     applyRifle(saved.id);
     const state = collectState();
@@ -317,7 +341,7 @@ function bindEvents() {
     calculateAndRender();
   });
   const cartridgeFields = ['bulletWeightG', 'caliberMm', 'bc', 'bcG7', 'muzzleVelocity'];
-  const rifleFields = ['sightHeightMm', 'zeroRange'];
+  const rifleFields = ['sightHeightMm'];
   for (const f of NUMERIC_FIELDS) {
     $(f).addEventListener('input', () => {
       if (cartridgeFields.includes(f)) {
@@ -335,6 +359,11 @@ function bindEvents() {
   $('dragModel').addEventListener('change', calculateAndRender);
   $('calcBtn').addEventListener('click', calculateAndRender);
   $('exportBtn').addEventListener('click', exportCsv);
+  $('reticleRange').addEventListener('change', (e) => reticle && reticle.setRange(parseFloat(e.target.value)));
+  $('reticleType').addEventListener('change', (e) => reticle && reticle.setOptions({ reticleType: e.target.value }));
+  $('targetSizeCm').addEventListener('input', (e) => reticle && reticle.setOptions({ targetCm: parseFloat(e.target.value) }));
+  $('downloadReticleBtn').addEventListener('click', () => reticle && reticle.exportPNG());
+  $('printReticleBtn').addEventListener('click', () => window.print());
   $('resetBtn').addEventListener('click', () => {
     if (!confirm('Сбросить все параметры к значениям по умолчанию?')) return;
     applyState(DEFAULT_STATE);
@@ -369,6 +398,8 @@ function bindInstall() {
 
 async function init() {
   chart = createTrajectoryChart($('chart'), $('chartTooltip'));
+  reticle = createReticle($('reticleCanvas'));
+  reticle.resize();
   bindEvents();
   bindDialogs();
   bindInstall();

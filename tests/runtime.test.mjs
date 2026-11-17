@@ -14,11 +14,12 @@ test('runtime: приложение инициализируется и стро
 
   const noopCtx = new Proxy(
     {
-      setTransform() {}, clearRect() {}, fillRect() {}, beginPath() {},
+      setTransform() {}, scale() {}, save() {}, restore() {},
+      clearRect() {}, fillRect() {}, strokeRect() {}, beginPath() {},
       moveTo() {}, lineTo() {}, stroke() {}, fill() {}, arc() {},
-      fillText() {}, setLineDash() {},
+      fillText() {}, setLineDash() {}, rect() {}, clip() {},
     },
-    { get: (t, p) => (p in t ? t[p] : undefined), set: () => true },
+    { get: (t, p) => (p in t ? t[p] : () => {}), set: () => true },
   );
 
   window.HTMLCanvasElement.prototype.getContext = () => noopCtx;
@@ -66,6 +67,8 @@ test('runtime: приложение инициализируется и стро
   assert.match(rows[0].textContent, /10/);
   assert.match(rows[4].textContent, /100/);
   assert.equal(doc.querySelectorAll('#summaryCards .card').length, 5);
+  assert.equal(doc.querySelectorAll('#reticleRange option').length, 5, 'в ретике должен быть список дистанций');
+  assert.equal(doc.querySelectorAll('#resultTable tbody td[data-label]').length, 40, 'у всех ячеек должны быть подписи для мобильной версии');
   assert.equal(doc.querySelectorAll('#cartridgeSelect option').length, 9);
   assert.equal(doc.querySelectorAll('#rifleSelect option').length, 5);
   assert.match(doc.getElementById('statusBadge').textContent, /Онлайн/);

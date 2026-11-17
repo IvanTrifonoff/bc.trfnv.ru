@@ -1,6 +1,6 @@
 /* Service worker: офлайн-кэш оболочки приложения и справочника. */
 
-const CACHE = 'ballistic-pwa-v2';
+const CACHE = 'ballistic-pwa-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const ASSETS = [
   './js/chart.js',
   './js/storage.js',
   './js/drag-tables.js',
+  './js/reticle.js',
   './data/catalog.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

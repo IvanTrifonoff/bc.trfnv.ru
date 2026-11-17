@@ -44,6 +44,16 @@ test('боковой ветер вызывает снос вправо', () => {
   assert.ok(at100.windageMm > 0, `windage = ${at100.windageMm}`);
 });
 
+test('угловые поправки указаны в миллирадианах, а не радианах', () => {
+  const res = calculate({ ...base, windSpeed: 4, windFromDeg: 90 });
+  for (const s of res.samples) {
+    assert.ok(Math.abs(s.dropMrad - s.dropMm / s.range) < 0.01, `drop@${s.range}: ${s.dropMrad}`);
+    assert.ok(Math.abs(s.windageMrad - s.windageMm / s.range) < 0.01, `wind@${s.range}: ${s.windageMrad}`);
+  }
+  const at100 = res.samples.find((s) => s.range === 100);
+  assert.ok(at100.windageMrad > 0.5, `ожидался заметный снос в мрад, получено ${at100.windageMrad}`);
+});
+
 test('G7 с пересчитанным BC даёт близкую траекторию к G1', () => {
   const g1 = calculate({ ...base, dragModel: 'G1', bc: 0.112 });
   const g7 = calculate({ ...base, dragModel: 'G7', bc: 0.063 });
