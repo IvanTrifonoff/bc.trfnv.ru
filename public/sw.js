@@ -1,6 +1,6 @@
 /* Service worker: офлайн-кэш оболочки приложения и справочника. */
 
-const CACHE = 'ballistic-pwa-v3';
+const CACHE = 'ballistic-pwa-v4';
 const ASSETS = [
   './',
   './index.html',

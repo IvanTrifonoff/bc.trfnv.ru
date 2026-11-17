@@ -26,7 +26,9 @@ test('DOM: все поля NUMERIC_FIELDS и справочники присут
     'bulletWeightG', 'caliberMm', 'bc', 'muzzleVelocity',
     'sightHeightMm', 'zeroRange', 'tempC', 'pressureHpa',
     'humidityPct', 'windSpeed', 'windFromDeg', 'elevationDeg',
-    'cartridgeSelect', 'rifleSelect', 'ranges', 'resultTable', 'chart',
+    'cartridgeSelect', 'rifleSelect', 'rangeFrom', 'rangeTo', 'rangeStep',
+    'resultTable', 'chart', 'themeToggle', 'sec-cartridge', 'sec-conditions',
+    'col-drop', 'col-clicks',
   ];
   const missing = fields.filter((id) => !doc.getElementById(id));
   assert.deepEqual(missing, []);

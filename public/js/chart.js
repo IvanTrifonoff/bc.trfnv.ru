@@ -53,7 +53,8 @@ export function createTrajectoryChart(canvas, tooltipEl) {
     maxV += margin;
 
     const x = (r) => pad.l + ((r - minR) / (maxR - minR || 1)) * cw;
-    const y = (v) => pad.t + (1 - (v - minV) / (maxV - minV || 1)) * ch;
+    // Положительное «падение» = пуля ниже линии прицела, поэтому оно идёт ВНИЗ.
+    const y = (v) => pad.t + ((v - minV) / (maxV - minV || 1)) * ch;
 
     // Сетка и подписи
     ctx.strokeStyle = '#e5e7eb';
@@ -113,18 +114,6 @@ export function createTrajectoryChart(canvas, tooltipEl) {
         ctx.arc(x(sample.range), y(sample[s.key]), 2.5, 0, Math.PI * 2);
         ctx.fill();
       });
-    }
-
-    // Легенда
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    let lx = pad.l + 6;
-    for (const s of series) {
-      ctx.fillStyle = s.color;
-      ctx.fillRect(lx, pad.t + 2, 10, 3);
-      ctx.fillStyle = '#374151';
-      ctx.fillText(s.label + ' (мм)', lx + 14, pad.t - 1);
-      lx += 92;
     }
 
     // Курсор

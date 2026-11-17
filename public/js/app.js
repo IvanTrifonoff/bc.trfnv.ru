@@ -29,14 +29,22 @@ const DEFAULT_STATE = {
   windSpeed: 3,
   windFromDeg: 90,
   elevationDeg: 0,
-  ranges: [10, 25, 50, 75, 100],
+  rangeFrom: 40,
+  rangeTo: 100,
+  rangeStep: 10,
+  sections: { cartridge: true, advanced: false, rifle: true, zero: true, conditions: false, ranges: true },
+  columns: { velocity: true, energy: true, drop: true, windage: true, time: false, mrad: true, clicks: true },
 };
 
 const NUMERIC_FIELDS = [
   'bulletWeightG', 'caliberMm', 'bc', 'bcG7', 'muzzleVelocity', 'clickMrad',
   'sightHeightMm', 'zeroRange', 'tempC', 'pressureHpa',
   'humidityPct', 'windSpeed', 'windFromDeg', 'elevationDeg',
+  'rangeFrom', 'rangeTo', 'rangeStep',
 ];
+
+const SECTION_IDS = ['cartridge', 'advanced', 'rifle', 'zero', 'conditions', 'ranges'];
+const COLUMN_IDS = ['velocity', 'energy', 'drop', 'windage', 'time', 'mrad', 'clicks'];
 
 const $ = (id) => document.getElementById(id);
 let chart = null;
@@ -54,6 +62,12 @@ function fill(id, value) {
 
 function applyState(state) {
   const s = { ...DEFAULT_STATE, ...state };
+  // Совместимость со старыми сохранёнными состояниями, где был список дистанций.
+  if (s.rangeFrom == null && Array.isArray(state.ranges) && state.ranges.length) {
+    s.rangeFrom = state.ranges[0];
+    s.rangeTo = state.ranges[state.ranges.length - 1];
+    s.rangeStep = state.ranges.length > 1 ? state.ranges[1] - state.ranges[0] : 10;
+  }
   fill('bulletWeightG', s.bulletWeightG);
   fill('caliberMm', s.caliberMm);
   fill('bc', s.bc);
@@ -69,9 +83,25 @@ function applyState(state) {
   fill('windSpeed', s.windSpeed);
   fill('windFromDeg', s.windFromDeg);
   fill('elevationDeg', s.elevationDeg);
-  fill('ranges', s.ranges.join(', '));
+  fill('rangeFrom', s.rangeFrom);
+  fill('rangeTo', s.rangeTo);
+  fill('rangeStep', s.rangeStep);
+  for (const id of SECTION_IDS) {
+    $(`sec-${id}`).checked = (s.sections || {})[id] ?? DEFAULT_STATE.sections[id];
+  }
+  for (const id of COLUMN_IDS) {
+    $(`col-${id}`).checked = (s.columns || {})[id] ?? DEFAULT_STATE.columns[id];
+  }
   $('cartridgeId').value = s.cartridgeId || '';
   $('rifleId').value = s.rifleId || '';
+  applySectionVisibility();
+}
+
+function applySectionVisibility() {
+  for (const id of SECTION_IDS) {
+    const body = document.querySelector(`[data-section="${id}"]`);
+    if (body) body.hidden = !$(`sec-${id}`).checked;
+  }
 }
 
 function collectState() {
@@ -84,12 +114,20 @@ function collectState() {
     const id = f === 'cartridgeId' || f === 'rifleId' ? f : f;
     state[f] = num(id, DEFAULT_STATE[f]);
   }
-  state.ranges = $('ranges').value
-    .split(/[,\s;]+/)
-    .map((v) => parseFloat(v.replace(',', '.')))
-    .filter((v) => Number.isFinite(v) && v > 0)
-    .slice(0, 20);
-  if (!state.ranges.length) state.ranges = DEFAULT_STATE.ranges.slice();
+  const from = num('rangeFrom', DEFAULT_STATE.rangeFrom);
+  const to = num('rangeTo', DEFAULT_STATE.rangeTo);
+  const step = num('rangeStep', DEFAULT_STATE.rangeStep);
+  state.rangeFrom = from;
+  state.rangeTo = to;
+  state.rangeStep = step;
+  state.ranges = [];
+  if (step > 0 && to >= from) {
+    for (let r = from; r <= to + 1e-9 && state.ranges.length < 30; r += step) {
+      state.ranges.push(Math.round(r * 1000) / 1000);
+    }
+  }
+  state.sections = Object.fromEntries(SECTION_IDS.map((id) => [id, $(`sec-${id}`).checked]));
+  state.columns = Object.fromEntries(COLUMN_IDS.map((id) => [id, $(`col-${id}`).checked]));
   return state;
 }
 
@@ -173,22 +211,31 @@ function renderSummary(result, state) {
     .join('');
 }
 
-function renderTable(result, clickMrad) {
-  const head =
-    '<thead><tr><th>Дальность, м</th><th>Скорость, м/с</th><th>Энергия, Дж</th>' +
-    '<th>Падение, мм</th><th>Снос, мм</th><th>Время, с</th><th>Поправка, мрад</th>' +
-    '<th>Клики в/г</th></tr></thead>';
+function renderTable(result, state) {
+  const click = state.clickMrad || 0.1;
+  const cols = [
+    { id: 'range', label: 'Дальность, м', cell: (s) => fmt(s.range, 0) },
+    { id: 'velocity', label: 'Скорость, м/с', cell: (s) => fmt(s.velocity, 0) },
+    { id: 'energy', label: 'Энергия, Дж', cell: (s) => fmt(s.energy, 0) },
+    { id: 'drop', label: 'Падение, мм', cls: (s) => (s.dropMm > 0 ? 'down' : 'up'), cell: (s) => fmt(s.dropMm) },
+    { id: 'windage', label: 'Снос, мм', cls: (s) => (s.windageMm > 0 ? 'right' : 'left'), cell: (s) => fmt(s.windageMm) },
+    { id: 'time', label: 'Время, с', cell: (s) => fmt(s.time, 3) },
+    { id: 'mrad', label: 'Поправка, мрад', cell: (s) => fmt(s.dropMrad, 2) + ' / ' + fmt(s.windageMrad, 2) },
+    { id: 'clicks', label: 'Клики в/г', cell: (s) => fmt(s.dropMrad / click, 0) + ' / ' + fmt(s.windageMrad / click, 0) },
+  ];
+  const active = cols.filter((c) => c.id === 'range' || state.columns[c.id]);
+  const head = '<thead><tr>' + active.map((c) => `<th>${c.label}</th>`).join('') + '</tr></thead>';
   const rows = result.samples
     .map(
       (s) =>
-        `<tr><td data-label="Дальность, м">${fmt(s.range, 0)}</td>` +
-        `<td data-label="Скорость, м/с">${fmt(s.velocity, 0)}</td>` +
-        `<td data-label="Энергия, Дж">${fmt(s.energy, 0)}</td>` +
-        `<td data-label="Падение, мм" class="${s.dropMm > 0 ? 'down' : 'up'}">${fmt(s.dropMm)}</td>` +
-        `<td data-label="Снос, мм" class="${s.windageMm > 0 ? 'right' : 'left'}">${fmt(s.windageMm)}</td>` +
-        `<td data-label="Время, с">${fmt(s.time, 3)}</td>` +
-        `<td data-label="Поправка, мрад">${fmt(s.dropMrad, 2)} / ${fmt(s.windageMrad, 2)}</td>` +
-        `<td data-label="Клики в/г">${fmt(s.dropMrad / clickMrad, 0)} / ${fmt(s.windageMrad / clickMrad, 0)}</td></tr>`,
+        '<tr>' +
+        active
+          .map(
+            (c) =>
+              `<td data-label="${c.label}"${c.cls ? ` class="${c.cls(s)}"` : ''}>${c.cell(s)}</td>`,
+          )
+          .join('') +
+        '</tr>',
     )
     .join('');
   $('resultTable').innerHTML = head + '<tbody>' + rows + '</tbody>';
@@ -205,6 +252,11 @@ function calculateAndRender() {
   if (state.bulletWeightG <= 0 || state.caliberMm <= 0 || activeBc <= 0 || state.muzzleVelocity <= 0 || state.clickMrad <= 0) {
     $('errorBox').hidden = false;
     $('errorBox').textContent = 'Проверьте параметры патрона и цену щелчка: всё должно быть больше нуля.';
+    return;
+  }
+  if (!state.ranges.length || state.rangeFrom <= 0 || state.rangeTo < state.rangeFrom || state.rangeStep <= 0) {
+    $('errorBox').hidden = false;
+    $('errorBox').textContent = 'Проверьте диапазон дистанций: «до» должно быть не меньше «от», шаг — больше нуля.';
     return;
   }
   $('errorBox').hidden = true;
@@ -226,7 +278,7 @@ function calculateAndRender() {
     ranges: state.ranges,
   });
   renderSummary(result, state);
-  renderTable(result, state.clickMrad);
+  renderTable(result, state);
   if (chart) chart.setData(result);
 
   const rangeSelect = $('reticleRange');
@@ -355,7 +407,24 @@ function bindEvents() {
       calculateAndRender();
     });
   }
-  $('ranges').addEventListener('input', calculateAndRender);
+  for (const id of ['rangeFrom', 'rangeTo', 'rangeStep']) {
+    $(id).addEventListener('input', calculateAndRender);
+  }
+  for (const id of SECTION_IDS) {
+    $(`sec-${id}`).addEventListener('change', () => {
+      applySectionVisibility();
+      persist();
+    });
+  }
+  for (const id of COLUMN_IDS) {
+    $(`col-${id}`).addEventListener('change', calculateAndRender);
+  }
+  $('themeToggle').addEventListener('change', (e) => {
+    document.documentElement.classList.toggle('dark', e.target.checked);
+    try {
+      localStorage.setItem('ballistics.theme', e.target.checked ? 'dark' : 'light');
+    } catch (_) { /* ignore */ }
+  });
   $('dragModel').addEventListener('change', calculateAndRender);
   $('calcBtn').addEventListener('click', calculateAndRender);
   $('exportBtn').addEventListener('click', exportCsv);
@@ -397,6 +466,7 @@ function bindInstall() {
 }
 
 async function init() {
+  $('themeToggle').checked = document.documentElement.classList.contains('dark');
   chart = createTrajectoryChart($('chart'), $('chartTooltip'));
   reticle = createReticle($('reticleCanvas'));
   reticle.resize();

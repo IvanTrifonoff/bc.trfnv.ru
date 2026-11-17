@@ -63,12 +63,27 @@ test('runtime: приложение инициализируется и стро
   const doc = window.document;
   assert.deepEqual(errors, [], `JS-ошибки: ${errors.join('; ')}`);
   const rows = doc.querySelectorAll('#resultTable tbody tr');
-  assert.equal(rows.length, 5, 'ожидается 5 строк таблицы');
-  assert.match(rows[0].textContent, /10/);
-  assert.match(rows[4].textContent, /100/);
+  assert.equal(rows.length, 7, 'ожидается 7 строк: 40..100 с шагом 10');
+  assert.match(rows[0].textContent, /40/);
+  assert.match(rows[6].textContent, /100/);
   assert.equal(doc.querySelectorAll('#summaryCards .card').length, 5);
-  assert.equal(doc.querySelectorAll('#reticleRange option').length, 5, 'в ретике должен быть список дистанций');
-  assert.equal(doc.querySelectorAll('#resultTable tbody td[data-label]').length, 40, 'у всех ячеек должны быть подписи для мобильной версии');
+  assert.equal(doc.querySelectorAll('#reticleRange option').length, 7, 'в ретике должен быть список дистанций');
+  assert.equal(doc.querySelectorAll('#resultTable tbody td[data-label]').length, 49, 'у всех ячеек должны быть подписи для мобильной версии');
+  assert.equal(doc.querySelectorAll('#resultTable thead th').length, 7, 'по умолчанию включены 7 столбцов из 8');
+
+  // Галочки столбцов реально скрывают колонки.
+  const colTime = doc.getElementById('col-time');
+  colTime.checked = true;
+  colTime.dispatchEvent(new window.Event('change', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 40));
+  assert.equal(doc.querySelectorAll('#resultTable thead th').length, 8);
+
+  // Блоки ввода скрываются галочками.
+  assert.equal(doc.querySelector('[data-section="conditions"]').hidden, true);
+  const sec = doc.getElementById('sec-conditions');
+  sec.checked = true;
+  sec.dispatchEvent(new window.Event('change', { bubbles: true }));
+  assert.equal(doc.querySelector('[data-section="conditions"]').hidden, false);
   assert.equal(doc.querySelectorAll('#cartridgeSelect option').length, 9);
   assert.equal(doc.querySelectorAll('#rifleSelect option').length, 5);
   assert.match(doc.getElementById('statusBadge').textContent, /Онлайн/);

@@ -6,6 +6,11 @@
     <meta name="theme-color" content="#111827" />
     <meta name="description" content="Офлайн баллистический калькулятор для пневматики и малокалиберного оружия" />
     <title>Баллистический калькулятор</title>
+    <script>
+      try {
+        if (localStorage.getItem('ballistics.theme') === 'dark') document.documentElement.classList.add('dark');
+      } catch (e) { /* приватный режим */ }
+    </script>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/icon-192.png" type="image/png" />
     <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -21,6 +26,7 @@
         </div>
       </div>
       <div class="top-actions">
+        <label class="theme-toggle"><input type="checkbox" id="themeToggle" /> 🌙 Тёмная тема</label>
         <span id="statusBadge" class="badge">● Онлайн</span>
         <button id="installBtn" class="btn btn-ghost" hidden>Установить PWA</button>
       </div>
@@ -28,114 +34,154 @@
 
     <main class="layout">
       <section class="panel inputs">
-        <div class="section-title">1. Патрон</div>
-        <label class="field">
-          <span>Справочник патронов</span>
-          <select id="cartridgeSelect"></select>
-          <small class="help">Выберите готовый патрон — поля ниже заполнятся автоматически. «Вручную» — свои значения.</small>
-        </label>
-        <label class="field">
-          <span>Модель сопротивления</span>
-          <select id="dragModel">
-            <option value="G1">G1 — плоскодонные / круглые пули (.22LR)</option>
-            <option value="G7">G7 — боттейл / остроконечные пули</option>
-          </select>
-          <small class="help">G1 подходит для большинства патронов .22LR. G7 — для пуль с скошенным дном; BC для выбранной модели берётся из поля ниже.</small>
-        </label>
-        <div class="grid-2">
-          <label class="field">
-            <span>Масса пули, г</span>
-            <input id="bulletWeightG" type="number" step="0.01" min="0" inputmode="decimal" />
-            <small class="help">Вес пули в граммах. Для .22LR обычно 2,6 г (40 grain).</small>
-          </label>
-          <label class="field">
-            <span>Калибр / диаметр пули, мм</span>
-            <input id="caliberMm" type="number" step="0.01" min="0" inputmode="decimal" />
-            <small class="help">Диаметр пули, не гильзы. Для .22LR — 5,56 мм.</small>
-          </label>
-          <label class="field">
-            <span>BC G1, lb/in²</span>
-            <input id="bc" type="number" step="0.001" min="0" inputmode="decimal" />
-            <small class="help">Баллистический коэффициент по G1. Чем больше — тем лучше пуля летит. Для .22LR ~0,11–0,15.</small>
-          </label>
-          <label class="field">
-            <span>BC G7, lb/in²</span>
-            <input id="bcG7" type="number" step="0.001" min="0" inputmode="decimal" />
-            <small class="help">То же, но для модели G7. Используется, если выше выбран G7. Обычно меньше G1 примерно вдвое.</small>
-          </label>
-          <label class="field">
-            <span>Начальная скорость, м/с</span>
-            <input id="muzzleVelocity" type="number" step="1" min="0" inputmode="decimal" />
-            <small class="help">Скорость у дула. Измерьте хронографом или возьмите из данных производителя (326 м/с у CCI SV).</small>
-          </label>
-          <label class="field">
-            <span>Цена щелчка, мрад</span>
-            <input id="clickMrad" type="number" step="0.01" min="0.001" inputmode="decimal" />
-            <small class="help">На сколько миллирадиан поворачивается прицел за один щелчок. Часто 0,1 мрад (= 1 см на 100 м).</small>
-          </label>
+        <div class="section-title">
+          <label class="section-toggle"><input type="checkbox" id="sec-cartridge" checked /> 1. Патрон</label>
         </div>
-        <button id="addCartridgeBtn" class="btn btn-small">+ Своя пуля</button>
+        <div class="section-body" data-section="cartridge">
+          <label class="field">
+            <span>Справочник патронов</span>
+            <select id="cartridgeSelect"></select>
+            <small class="help">Выберите готовый патрон — поля заполнятся автоматически. «Вручную» — свои значения.</small>
+          </label>
+          <div class="grid-2">
+            <label class="field">
+              <span>Масса пули, г</span>
+              <input id="bulletWeightG" type="number" step="0.01" min="0" inputmode="decimal" />
+              <small class="help">Вес пули в граммах. Для .22LR обычно 2,6 г (40 grain).</small>
+            </label>
+            <label class="field">
+              <span>Диаметр пули, мм</span>
+              <input id="caliberMm" type="number" step="0.01" min="0" inputmode="decimal" />
+              <small class="help">Диаметр пули, не гильзы. Для .22LR — 5,56 мм.</small>
+            </label>
+            <label class="field">
+              <span>Начальная скорость, м/с</span>
+              <input id="muzzleVelocity" type="number" step="1" min="0" inputmode="decimal" />
+              <small class="help">Скорость у дула. Измерьте хронографом или возьмите у производителя (326 м/с у CCI SV).</small>
+            </label>
+            <label class="field">
+              <span>BC G1, lb/in²</span>
+              <input id="bc" type="number" step="0.001" min="0" inputmode="decimal" />
+              <small class="help">Баллистический коэффициент по G1. Больше — лучше летит. Для .22LR ~0,11–0,15.</small>
+            </label>
+          </div>
 
-        <div class="section-title">2. Оружие</div>
-        <label class="field">
-          <span>Справочник оружия</span>
-          <select id="rifleSelect"></select>
-          <small class="help">Выбор винтовки подставляет только высоту прицела. Дистанцию пристрелки задайте отдельно ниже — она не перезаписывается.</small>
-        </label>
-        <label class="field">
-          <span>Высота прицела над осью ствола, мм</span>
-          <input id="sightHeightMm" type="number" step="1" min="0" inputmode="decimal" />
-          <small class="help">Расстояние от центра оптики/мушки до центра канала ствола. Обычно 12–40 мм. Влияет на угол прицеливания.</small>
-        </label>
-        <button id="addRifleBtn" class="btn btn-small">+ Своя винтовка</button>
+          <div class="section-title sub">
+            <label class="section-toggle"><input type="checkbox" id="sec-advanced" /> Дополнительно: модель, BC G7, клики</label>
+          </div>
+          <div class="section-body" data-section="advanced" hidden>
+            <label class="field">
+              <span>Модель сопротивления</span>
+              <select id="dragModel">
+                <option value="G1">G1 — плоскодонные / круглые пули (.22LR)</option>
+                <option value="G7">G7 — боттейл / остроконечные пули</option>
+              </select>
+              <small class="help">G1 подходит для большинства патронов .22LR. G7 — для пуль со скошенным дном.</small>
+            </label>
+            <div class="grid-2">
+              <label class="field">
+                <span>BC G7, lb/in²</span>
+                <input id="bcG7" type="number" step="0.001" min="0" inputmode="decimal" />
+                <small class="help">Используется, если выше выбран G7. Обычно меньше G1 примерно вдвое.</small>
+              </label>
+              <label class="field">
+                <span>Цена щелчка, мрад</span>
+                <input id="clickMrad" type="number" step="0.01" min="0.001" inputmode="decimal" />
+                <small class="help">Сколько миллирадиан за один щелчок. Часто 0,1 мрад (= 1 см на 100 м).</small>
+              </label>
+            </div>
+          </div>
+          <button id="addCartridgeBtn" class="btn btn-small">+ Своя пуля</button>
+        </div>
 
-        <div class="section-title">3. Пристрелка</div>
-        <label class="field">
-          <span>Дистанция пристрелки, м</span>
-          <input id="zeroRange" type="number" step="1" min="1" inputmode="numeric" />
-          <small class="help">На каком расстоянии пуля попадает точно в точку прицеливания. Это ВАШЕ значение: 25, 50, 100 м — измените поле и таблица пересчитается. Выбор винтовки его не трогает.</small>
-        </label>
+        <div class="section-title">
+          <label class="section-toggle"><input type="checkbox" id="sec-rifle" checked /> 2. Оружие</label>
+        </div>
+        <div class="section-body" data-section="rifle">
+          <label class="field">
+            <span>Справочник оружия</span>
+            <select id="rifleSelect"></select>
+            <small class="help">Выбор винтовки подставляет только высоту прицела. Дистанцию пристрелки он не меняет.</small>
+          </label>
+          <label class="field">
+            <span>Высота прицела над осью ствола, мм</span>
+            <input id="sightHeightMm" type="number" step="1" min="0" inputmode="decimal" />
+            <small class="help">Расстояние от оптики/мушки до центра канала ствола. Обычно 12–40 мм.</small>
+          </label>
+          <button id="addRifleBtn" class="btn btn-small">+ Своя винтовка</button>
+        </div>
 
-        <div class="section-title">4. Условия стрельбы</div>
-        <div class="grid-2">
+        <div class="section-title">
+          <label class="section-toggle"><input type="checkbox" id="sec-zero" checked /> 3. Пристрелка</label>
+        </div>
+        <div class="section-body" data-section="zero">
           <label class="field">
-            <span>Температура, °C</span>
-            <input id="tempC" type="number" step="0.5" inputmode="decimal" />
-            <small class="help">Температура воздуха. Влияет на плотность и скорость звука. Норма — 15 °C.</small>
-          </label>
-          <label class="field">
-            <span>Давление, гПа</span>
-            <input id="pressureHpa" type="number" step="1" min="0" inputmode="decimal" />
-            <small class="help">Атмосферное давление на уровне стрелка. Норма — 1013 гПа; берите данные погоды.</small>
-          </label>
-          <label class="field">
-            <span>Влажность, %</span>
-            <input id="humidityPct" type="number" step="1" min="0" max="100" inputmode="numeric" />
-            <small class="help">Относительная влажность. На траекторию .22LR влияет слабо, 0–100 %.</small>
-          </label>
-          <label class="field">
-            <span>Скорость ветра, м/с</span>
-            <input id="windSpeed" type="number" step="0.5" min="0" inputmode="decimal" />
-            <small class="help">Скорость бокового ветра. 3 м/с на 100 м сносит пулю .22LR на несколько сантиметров.</small>
-          </label>
-          <label class="field">
-            <span>Направление ветра, °</span>
-            <input id="windFromDeg" type="number" step="15" inputmode="numeric" />
-            <small class="help">Откуда дует: 0° — в лицо, 90° — слева, 180° — в спину, 270° — справа.</small>
-          </label>
-          <label class="field">
-            <span>Угол места, °</span>
-            <input id="elevationDeg" type="number" step="1" inputmode="decimal" />
-            <small class="help">Наклон выстрела: плюс — вверх по горе, минус — вниз. Для горизонтальной стрельбы 0.</small>
+            <span>Дистанция пристрелки, м</span>
+            <input id="zeroRange" type="number" step="1" min="1" inputmode="numeric" />
+            <small class="help">Расстояние, на котором пуля попадает в точку прицеливания. Ваше значение — выбор винтовки его не перезаписывает.</small>
           </label>
         </div>
 
-        <div class="section-title">5. Дистанции для таблицы</div>
-        <label class="field">
-          <span>Список дистанций, м</span>
-          <input id="ranges" type="text" inputmode="text" />
-          <small class="help">Через запятую, например: 10, 25, 50, 75, 100. Они же появятся в прицельной картинке.</small>
-        </label>
+        <div class="section-title">
+          <label class="section-toggle"><input type="checkbox" id="sec-conditions" /> 4. Условия стрельбы</label>
+        </div>
+        <div class="section-body" data-section="conditions" hidden>
+          <div class="grid-2">
+            <label class="field">
+              <span>Температура, °C</span>
+              <input id="tempC" type="number" step="0.5" inputmode="decimal" />
+              <small class="help">Температура воздуха. Норма — 15 °C. Влияет на плотность воздуха и звук.</small>
+            </label>
+            <label class="field">
+              <span>Давление, гПа</span>
+              <input id="pressureHpa" type="number" step="1" min="0" inputmode="decimal" />
+              <small class="help">Давление на месте стрельбы. Норма — 1013 гПа; возьмите из погоды.</small>
+            </label>
+            <label class="field">
+              <span>Влажность, %</span>
+              <input id="humidityPct" type="number" step="1" min="0" max="100" inputmode="numeric" />
+              <small class="help">Относительная влажность, 0–100 %. На .22LR влияет слабо.</small>
+            </label>
+            <label class="field">
+              <span>Скорость ветра, м/с</span>
+              <input id="windSpeed" type="number" step="0.5" min="0" inputmode="decimal" />
+              <small class="help">Боковой ветер. 3 м/с на 100 м сносит пулю на несколько сантиметров.</small>
+            </label>
+            <label class="field">
+              <span>Направление ветра, °</span>
+              <input id="windFromDeg" type="number" step="15" inputmode="numeric" />
+              <small class="help">Откуда дует: 0° — в лицо, 90° — слева, 180° — в спину, 270° — справа.</small>
+            </label>
+            <label class="field">
+              <span>Угол места, °</span>
+              <input id="elevationDeg" type="number" step="1" inputmode="decimal" />
+              <small class="help">Наклон выстрела: плюс — вверх, минус — вниз. Горизонт — 0.</small>
+            </label>
+          </div>
+        </div>
+
+        <div class="section-title">
+          <label class="section-toggle"><input type="checkbox" id="sec-ranges" checked /> 5. Дистанции</label>
+        </div>
+        <div class="section-body" data-section="ranges">
+          <div class="grid-3">
+            <label class="field compact">
+              <span>От, м</span>
+              <input id="rangeFrom" type="number" step="1" min="1" inputmode="numeric" />
+              <small class="help">Первая дистанция, например 40.</small>
+            </label>
+            <label class="field compact">
+              <span>До, м</span>
+              <input id="rangeTo" type="number" step="1" min="1" inputmode="numeric" />
+              <small class="help">Последняя дистанция, например 100.</small>
+            </label>
+            <label class="field compact">
+              <span>Шаг, м</span>
+              <input id="rangeStep" type="number" step="1" min="1" inputmode="numeric" />
+              <small class="help">Интервал, например 10 → 40, 50, … 100.</small>
+            </label>
+          </div>
+        </div>
 
         <div class="actions">
           <button id="calcBtn" class="btn btn-primary">Рассчитать</button>
@@ -153,7 +199,7 @@
         <div class="chart-wrap">
           <div class="chart-head">
             <h2>Траектория</h2>
-            <span class="chart-legend"><i class="dot red"></i> падение <i class="dot blue"></i> снос</span>
+            <span class="chart-legend"><i class="dot red"></i> падение (вниз) <i class="dot blue"></i> снос</span>
           </div>
           <div class="canvas-holder">
             <canvas id="chart"></canvas>
@@ -161,6 +207,16 @@
           </div>
         </div>
 
+        <div class="column-toggles" id="columnToggles">
+          <span class="column-toggles-label">Столбцы таблицы:</span>
+          <label><input type="checkbox" id="col-velocity" checked /> Скорость</label>
+          <label><input type="checkbox" id="col-energy" checked /> Энергия</label>
+          <label><input type="checkbox" id="col-drop" checked /> Падение</label>
+          <label><input type="checkbox" id="col-windage" checked /> Снос</label>
+          <label><input type="checkbox" id="col-time" /> Время</label>
+          <label><input type="checkbox" id="col-mrad" checked /> Мрад</label>
+          <label><input type="checkbox" id="col-clicks" checked /> Клики</label>
+        </div>
         <div class="table-wrap">
           <table id="resultTable"></table>
         </div>
@@ -190,7 +246,7 @@
               <input id="targetSizeCm" type="number" step="1" min="1" value="10" inputmode="numeric" />
             </label>
           </div>
-          <p class="help block">Красная метка — точка попадания, серый квадрат — цель выбранного размера. Масштаб: 1 мрад ≈ 1 мм на 1 м.</p>
+          <p class="help block">Красная метка — точка попадания, серый квадрат — цель. Масштаб: 1 мрад ≈ 1 мм на 1 м.</p>
           <div class="reticle-holder">
             <canvas id="reticleCanvas" width="840" height="840"></canvas>
           </div>
@@ -240,7 +296,7 @@
         <label class="field">
           <span>Высота прицела, мм</span>
           <input name="sight" type="number" step="1" value="25" required />
-          <small class="help">Расстояние от оптики/мушки до оси ствола. Пристрелка задаётся отдельным полем и здесь не меняется.</small>
+          <small class="help">Расстояние от оптики/мушки до оси ствола. Пристрелка задаётся отдельно.</small>
         </label>
         <div class="dialog-actions">
           <button type="button" class="btn btn-ghost" data-close>Отмена</button>
