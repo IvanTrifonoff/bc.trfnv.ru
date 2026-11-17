@@ -1,4 +1,4 @@
-import { calculate } from './ballistics.js';
+import { calculate, directShot } from './ballistics.js';
 import { loadCatalog, getCatalog, findCartridge, findRifle } from './catalog.js';
 import {
   loadState,
@@ -23,6 +23,7 @@ const DEFAULT_STATE = {
   rifleId: '',
   sightHeightMm: 25,
   zeroRange: 50,
+  targetHeightCm: 5,
   tempC: 15,
   pressureHpa: 1013.25,
   humidityPct: 50,
@@ -38,7 +39,7 @@ const DEFAULT_STATE = {
 
 const NUMERIC_FIELDS = [
   'bulletWeightG', 'caliberMm', 'bc', 'bcG7', 'muzzleVelocity', 'clickMrad',
-  'sightHeightMm', 'zeroRange', 'tempC', 'pressureHpa',
+  'sightHeightMm', 'zeroRange', 'targetHeightCm', 'tempC', 'pressureHpa',
   'humidityPct', 'windSpeed', 'windFromDeg', 'elevationDeg',
   'rangeFrom', 'rangeTo', 'rangeStep',
 ];
@@ -77,6 +78,7 @@ function applyState(state) {
   fill('muzzleVelocity', s.muzzleVelocity);
   fill('sightHeightMm', s.sightHeightMm);
   fill('zeroRange', s.zeroRange);
+  fill('targetHeightCm', s.targetHeightCm);
   fill('tempC', s.tempC);
   fill('pressureHpa', s.pressureHpa);
   fill('humidityPct', s.humidityPct);
@@ -211,6 +213,24 @@ function renderSummary(result, state) {
     .join('');
 }
 
+function renderPointBlank(shot, state) {
+  $('pbTargetLabel').textContent = fmt(state.targetHeightCm, 0);
+  const cards = [
+    { label: 'Ближний ноль', value: shot.nearZero != null ? fmt(shot.nearZero) + ' м' : '—', hint: 'первое пересечение линии прицела' },
+    { label: 'Дальний ноль', value: shot.farZero != null ? fmt(shot.farZero) + ' м' : '—', hint: 'второе пересечение (пристрелка)' },
+    { label: 'Превышение', value: '+' + fmt(shot.apexMm) + ' мм', hint: 'апогей на ' + fmt(shot.apexRange) + ' м' },
+    { label: 'Прямой выстрел', value: shot.mpbr != null ? fmt(shot.mpbr) + ' м' : '—', hint: 'пуля не выходит за цель ' + fmt(state.targetHeightCm, 0) + ' см' },
+  ];
+  $('pointBlankCards').innerHTML = cards
+    .map(
+      (c) =>
+        `<div class="card"><div class="card-label">${c.label}</div>` +
+        `<div class="card-value">${c.value}</div>` +
+        `<div class="card-hint">${c.hint}</div></div>`,
+    )
+    .join('');
+}
+
 function renderTable(result, state) {
   const click = state.clickMrad || 0.1;
   const cols = [
@@ -259,6 +279,11 @@ function calculateAndRender() {
     $('errorBox').textContent = 'Проверьте диапазон дистанций: «до» должно быть не меньше «от», шаг — больше нуля.';
     return;
   }
+  if (state.targetHeightCm <= 0) {
+    $('errorBox').hidden = false;
+    $('errorBox').textContent = 'Высота цели для прямого выстрела должна быть больше нуля.';
+    return;
+  }
   $('errorBox').hidden = true;
 
   const result = calculate({
@@ -279,7 +304,26 @@ function calculateAndRender() {
   });
   renderSummary(result, state);
   renderTable(result, state);
-  if (chart) chart.setData(result);
+
+  const shot = directShot({
+    bulletWeightG: state.bulletWeightG,
+    caliberMm: state.caliberMm,
+    bc: activeBc,
+    dragModel: state.dragModel,
+    muzzleVelocity: state.muzzleVelocity,
+    sightHeightMm: state.sightHeightMm,
+    zeroRange: state.zeroRange,
+    tempC: state.tempC,
+    pressureHpa: state.pressureHpa,
+    humidityPct: state.humidityPct,
+    windSpeed: state.windSpeed,
+    windFromDeg: state.windFromDeg,
+    elevationDeg: state.elevationDeg,
+    ranges: state.ranges,
+  }, state.targetHeightCm * 10);
+
+  renderPointBlank(shot, state);
+  if (chart) chart.setData(shot);
 
   const rangeSelect = $('reticleRange');
   const previous = rangeSelect.value;

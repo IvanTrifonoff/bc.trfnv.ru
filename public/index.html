@@ -120,6 +120,11 @@
             <input id="zeroRange" type="number" step="1" min="1" inputmode="numeric" />
             <small class="help">Расстояние, на котором пуля попадает в точку прицеливания. Ваше значение — выбор винтовки его не перезаписывает.</small>
           </label>
+          <label class="field">
+            <span>Высота цели для прямого выстрела, см</span>
+            <input id="targetHeightCm" type="number" step="1" min="1" inputmode="numeric" />
+            <small class="help">Вертикальный размер зоны поражения. Для .22LR по мелкой дичи — 4–5 см. Нужна для расчёта МПВ и зоны поражения.</small>
+          </label>
         </div>
 
         <div class="section-title">
@@ -196,10 +201,16 @@
       <section class="panel results">
         <div id="summaryCards" class="cards"></div>
 
+        <div class="pb-head">
+          <h2>Прямой выстрел</h2>
+          <span class="chart-legend">для высоты цели <span id="pbTargetLabel">5</span> см</span>
+        </div>
+        <div id="pointBlankCards" class="cards pb-cards"></div>
+
         <div class="chart-wrap">
           <div class="chart-head">
             <h2>Траектория</h2>
-            <span class="chart-legend"><i class="dot red"></i> падение (вниз) <i class="dot blue"></i> снос</span>
+            <span class="chart-legend"><i class="dot red"></i> траектория <i class="dot blue"></i> снос</span>
           </div>
           <div class="canvas-holder">
             <canvas id="chart"></canvas>

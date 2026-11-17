@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculate, airDensity, speedOfSound } from '../public/js/ballistics.js';
+import { calculate, directShot, airDensity, speedOfSound } from '../public/js/ballistics.js';
 
 const base = {
   bulletWeightG: 2.59,
@@ -63,6 +63,22 @@ test('G7 с пересчитанным BC даёт близкую траекто
   assert.ok(Math.abs(a.velocity - b.velocity) < 25, `${a.velocity} vs ${b.velocity}`);
   assert.equal(g1.dragModel, 'G1');
   assert.equal(g7.dragModel, 'G7');
+});
+
+test('прямой выстрел: нули, апогей и МПВ согласованы', () => {
+  const shot = directShot(base, 50);
+  assert.ok(shot.nearZero > 0 && shot.nearZero < base.zeroRange, `ближний ноль ${shot.nearZero}`);
+  assert.ok(Math.abs(shot.farZero - base.zeroRange) < 2, `дальний ноль ${shot.farZero}`);
+  assert.ok(shot.apexMm > 0, `апогей ${shot.apexMm}`);
+  assert.ok(shot.apexRange > shot.nearZero && shot.apexRange < shot.farZero);
+  assert.ok(shot.mpbr > shot.farZero, `МПВ ${shot.mpbr}`);
+  assert.ok(shot.samples.length > 100);
+});
+
+test('чем выше цель, тем больше МПВ', () => {
+  const small = directShot(base, 30);
+  const large = directShot(base, 100);
+  assert.ok(large.mpbr > small.mpbr, `${large.mpbr} vs ${small.mpbr}`);
 });
 
 test('высота прицела увеличивает угол прицеливания', () => {

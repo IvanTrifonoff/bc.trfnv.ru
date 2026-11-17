@@ -18,6 +18,7 @@ test('runtime: приложение инициализируется и стро
       clearRect() {}, fillRect() {}, strokeRect() {}, beginPath() {},
       moveTo() {}, lineTo() {}, stroke() {}, fill() {}, arc() {},
       fillText() {}, setLineDash() {}, rect() {}, clip() {},
+      createLinearGradient() { return { addColorStop() {} }; },
     },
     { get: (t, p) => (p in t ? t[p] : () => {}), set: () => true },
   );
@@ -67,6 +68,9 @@ test('runtime: приложение инициализируется и стро
   assert.match(rows[0].textContent, /40/);
   assert.match(rows[6].textContent, /100/);
   assert.equal(doc.querySelectorAll('#summaryCards .card').length, 5);
+  assert.equal(doc.querySelectorAll('#pointBlankCards .card').length, 4, '4 карточки прямого выстрела');
+  assert.match(doc.getElementById('pointBlankCards').textContent, /Ближний ноль/);
+  assert.match(doc.getElementById('pointBlankCards').textContent, /Прямой выстрел/);
   assert.equal(doc.querySelectorAll('#reticleRange option').length, 7, 'в ретике должен быть список дистанций');
   assert.equal(doc.querySelectorAll('#resultTable tbody td[data-label]').length, 49, 'у всех ячеек должны быть подписи для мобильной версии');
   assert.equal(doc.querySelectorAll('#resultTable thead th').length, 7, 'по умолчанию включены 7 столбцов из 8');

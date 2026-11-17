@@ -237,3 +237,86 @@ export function calculate(input) {
     formFactor: p.i,
   };
 }
+
+/** Плотная траектория с шагом по времени —для поиска пересечений и апогея. */
+function trace(p, theta, maxRange, dt = 0.0004) {
+  let s = {
+    x: 0,
+    y: -p.sightHeight,
+    z: 0,
+    vx: p.v0 * Math.cos(theta),
+    vy: p.v0 * Math.sin(theta),
+    vz: 0,
+  };
+  const out = [{ x: 0, y: s.y, z: 0, t: 0, v: p.v0 }];
+  let t = 0;
+  while (s.x < maxRange && t < 20) {
+    s = rk4Step(s, dt, p);
+    t += dt;
+    out.push({ x: s.x, y: s.y, z: s.z, t, v: Math.hypot(s.vx, s.vy, s.vz) });
+  }
+  return out;
+}
+
+function crossings(samples, level) {
+  const found = [];
+  for (let i = 1; i < samples.length; i++) {
+    const a = samples[i - 1];
+    const b = samples[i];
+    const va = a.y - level;
+    const vb = b.y - level;
+    if (va === 0) {
+      found.push(a.x);
+    } else if (va * vb < 0) {
+      const f = -va / (vb - va);
+      found.push(a.x + (b.x - a.x) * f);
+    }
+  }
+  return found;
+}
+
+/**
+ * Параметры прямого выстрела: ближний и дальний ноль, апогей,
+ * максимальная дистанция прямого выстрела для цели заданной высоты.
+ */
+export function directShot(input, targetHeightMm = 50) {
+  const p = buildParams(input);
+  const theta = solveZero(p, input.zeroRange);
+  const maxRange = Math.max(1.6 * input.zeroRange, ...(input.ranges || [100])) * 1.2;
+  const samples = trace(p, theta, maxRange, 0.0004);
+  const half = targetHeightMm / 2000; // половина высоты цели, м
+
+  const zeros = crossings(samples, 0);
+  const lower = crossings(samples, -half);
+  const upper = crossings(samples, half);
+  const apex = samples.reduce((best, s) => (s.y > best.y ? s : best), samples[0]);
+
+  const nearZero = zeros.length ? zeros[0] : null;
+  const farZero = zeros.length > 1 ? zeros[zeros.length - 1] : zeros[0] ?? null;
+  const mpbr = lower.length ? lower[lower.length - 1] : null;
+  let bandStart = p.sightHeight <= half ? 0 : lower.length ? lower[0] : null;
+  const bandEnd = mpbr;
+
+  // Зона поражения на дистанции пристрелки: интервал глубины, где пуля в цели.
+  const dangerNear = upper.length > 1 ? upper[1] : upper[0] ?? null;
+  const dangerFar = mpbr;
+
+  return {
+    targetHeightMm,
+    halfBandMm: targetHeightMm / 2,
+    nearZero,
+    farZero,
+    apexRange: apex.x,
+    apexMm: apex.y * 1000,
+    mpbr,
+    bandStart,
+    bandEnd,
+    dangerNear,
+    dangerFar,
+    samples: samples.map((s) => ({
+      range: s.x,
+      heightMm: s.y * 1000, // положительное = выше линии прицела
+      windageMm: s.z * 1000,
+    })),
+  };
+}
