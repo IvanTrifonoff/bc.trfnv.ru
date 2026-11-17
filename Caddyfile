@@ -1,0 +1,9 @@
+{$SITE_ADDR:localhost} {
+	root * /srv
+	encode gzip
+	file_server
+
+	header /sw.js Cache-Control "no-cache"
+	header /manifest.webmanifest Cache-Control "public, max-age=3600"
+	header /data/catalog.json Cache-Control "public, max-age=300"
+}

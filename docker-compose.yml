@@ -1,0 +1,20 @@
+services:
+  ballistic:
+    build: .
+    image: ballistic-pwa:latest
+    container_name: ballistic-pwa
+    restart: unless-stopped
+    environment:
+      # localhost — Caddy сам получает сертификат (прямой HTTPS).
+      # :80 — работа за reverse proxy (nginx), который терминирует TLS.
+      SITE_ADDR: ${SITE_ADDR:-localhost}
+    ports:
+      - "${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-80}:80"
+      - "${HTTPS_BIND:-0.0.0.0}:${HTTPS_PORT:-443}:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
