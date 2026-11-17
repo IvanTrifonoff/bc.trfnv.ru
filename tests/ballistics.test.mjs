@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculate, directShot, airDensity, speedOfSound } from '../public/js/ballistics.js';
+import { calculate, directShot, solveZeroAngle, correctionsAt, airDensity, speedOfSound } from '../public/js/ballistics.js';
 
 const base = {
   bulletWeightG: 2.59,
@@ -79,6 +79,29 @@ test('чем выше цель, тем больше МПВ', () => {
   const small = directShot(base, 30);
   const large = directShot(base, 100);
   assert.ok(large.mpbr > small.mpbr, `${large.mpbr} vs ${small.mpbr}`);
+});
+
+test('охота: на дистанции пристрелки поправка по высоте близка к нулю', () => {
+  const theta = solveZeroAngle(base);
+  const c = correctionsAt(base, theta, {
+    tempC: base.tempC,
+    pressureHpa: base.pressureHpa,
+    windSpeed: 0,
+    windFromDeg: 90,
+  }, base.zeroRange, 0.1);
+  assert.ok(Math.abs(c.dropMm) < 1, `drop@50 = ${c.dropMm}`);
+});
+
+test('охота: ветер даёт поправку по ветру, а смена температуры меняет поправку по высоте', () => {
+  const theta = solveZeroAngle(base);
+  const calm = correctionsAt(base, theta, { tempC: 15, pressureHpa: 1013, windSpeed: 0, windFromDeg: 90 }, 80, 0.1);
+  const windy = correctionsAt(base, theta, { tempC: 15, pressureHpa: 1013, windSpeed: 4, windFromDeg: 90 }, 80, 0.1);
+  assert.ok(windy.windageMm > 20, `ветровая поправка ${windy.windageMm}`);
+  assert.equal(calm.windageMm, 0);
+  assert.ok(windy.windageClicks > 0);
+
+  const cold = correctionsAt(base, theta, { tempC: -10, pressureHpa: 1013, windSpeed: 0, windFromDeg: 90 }, 80, 0.1);
+  assert.ok(Math.abs(cold.dropMm - calm.dropMm) > 0.5, `${calm.dropMm} vs ${cold.dropMm}`);
 });
 
 test('высота прицела увеличивает угол прицеливания', () => {

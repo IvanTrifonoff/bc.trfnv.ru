@@ -32,7 +32,12 @@
       </div>
     </header>
 
-    <main class="layout">
+    <nav class="mode-tabs">
+      <button type="button" id="modeSetup" class="mode-tab active">⚙ Настройка / Пристрелка</button>
+      <button type="button" id="modeHunt" class="mode-tab">🌲 Охота</button>
+    </nav>
+
+    <main class="layout" id="setupView">
       <section class="panel inputs">
         <div class="section-title">
           <label class="section-toggle"><input type="checkbox" id="sec-cartridge" checked /> 1. Патрон</label>
@@ -271,6 +276,85 @@
           Расчёт — приближение модели точечной массы (G1/G7). Реальные результаты зависят от
           конкретного ствола, пули и хронографа; проверяйте BC по своим отстрелам.
         </p>
+      </section>
+    </main>
+
+    <main class="hunt-layout" id="huntView" hidden>
+      <section class="panel hunt-inputs">
+        <div class="section-title">Профиль (из режима настройки)</div>
+        <div id="huntProfile" class="profile-box"></div>
+
+        <div class="section-title">Условия и дистанция</div>
+        <label class="field">
+          <span>Температура, °C</span>
+          <input id="huntTempC" type="number" step="0.5" inputmode="decimal" />
+          <small class="help">Температура воздуха на стрельбище.</small>
+        </label>
+        <div class="grid-2">
+          <label class="field">
+            <span>Давление, гПа</span>
+            <input id="huntPressure" type="number" step="1" min="0" inputmode="decimal" />
+            <small class="help">Из погоды. Норма — 1013 гПа.</small>
+          </label>
+          <label class="field">
+            <span>Ветер, м/с</span>
+            <input id="huntWindSpeed" type="number" step="0.5" min="0" inputmode="decimal" />
+            <small class="help">Скорость ветра. 0 — штиль.</small>
+          </label>
+        </div>
+        <label class="field">
+          <span>Направление ветра, °</span>
+          <input id="huntWindDir" type="number" step="15" inputmode="numeric" />
+          <small class="help">Откуда дует: 0° — в лицо, 90° — слева, 180° — в спину, 270° — справа.</small>
+        </label>
+        <label class="field">
+          <span>Расстояние до цели, м</span>
+          <input id="huntDistance" type="number" step="1" min="1" inputmode="numeric" />
+          <small class="help">Главное поле: дистанция до цели. Поправки пересчитаются сразу.</small>
+        </label>
+        <div class="actions">
+          <button id="huntCalcBtn" class="btn btn-primary">Обновить поправки</button>
+          <button id="huntToSetupBtn" class="btn btn-ghost">Изменить профиль</button>
+        </div>
+        <p id="huntError" class="error" hidden></p>
+      </section>
+
+      <section class="panel hunt-results">
+        <div class="hunt-title">
+          <div>
+            <div class="hunt-caption">ПОПРАВКИ НА</div>
+            <div class="hunt-distance" id="huntDistanceLabel">—</div>
+          </div>
+          <span id="huntCond" class="chart-legend"></span>
+        </div>
+
+        <div class="correction-grid">
+          <div class="correction-card vert">
+            <div class="corr-label">ПО ВЫСОТЕ</div>
+            <div class="corr-main">
+              <span class="corr-dir" id="huntDropDir">вверх</span>
+              <span class="corr-value" id="huntDropValue">—</span>
+              <span class="corr-unit">мм</span>
+            </div>
+            <div class="corr-sub"><span id="huntDropMrad">—</span> мрад · <span id="huntDropClicks">—</span> щелчков</div>
+          </div>
+          <div class="correction-card horiz">
+            <div class="corr-label">ПО ВЕТРУ</div>
+            <div class="corr-main">
+              <span class="corr-dir" id="huntWindDirLabel">влево</span>
+              <span class="corr-value" id="huntWindValue">—</span>
+              <span class="corr-unit">мм</span>
+            </div>
+            <div class="corr-sub"><span id="huntWindMrad">—</span> мрад · <span id="huntWindClicks">—</span> щелчков</div>
+          </div>
+        </div>
+
+        <div class="hunt-extra" id="huntExtra"></div>
+
+        <div class="hunt-reticle-holder">
+          <canvas id="huntReticle" width="840" height="840"></canvas>
+        </div>
+        <p class="disclaimer">Прицел выставлен при пристрелке в режиме «Настройка». Поправки рассчитаны для текущих условий без перепристрелки.</p>
       </section>
     </main>
 

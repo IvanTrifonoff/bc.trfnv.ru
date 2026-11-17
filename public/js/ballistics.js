@@ -202,6 +202,74 @@ function solveZero(p, zeroRange) {
  * @param {object} input параметры патрона, оружия и среды
  * @returns {{theta:number, thetaDeg:number, samples:Array, rho:number, sound:number}}
  */
+/** Угол прицеливания, зафиксированный при пристрелке (без ветра, по горизонтали). */
+export function solveZeroAngle(profile) {
+  const bc = profile.dragModel === 'G7' ? profile.bcG7 : profile.bc;
+  const p = buildParams({
+    bulletWeightG: profile.bulletWeightG,
+    caliberMm: profile.caliberMm,
+    bc,
+    dragModel: profile.dragModel,
+    muzzleVelocity: profile.muzzleVelocity,
+    sightHeightMm: profile.sightHeightMm,
+    tempC: profile.tempC,
+    pressureHpa: profile.pressureHpa,
+    humidityPct: profile.humidityPct,
+    windSpeed: 0,
+    windFromDeg: 0,
+    elevationDeg: 0,
+    ranges: [profile.zeroRange],
+  });
+  return solveZero(p, profile.zeroRange);
+}
+
+/**
+ * Поправки для режима «Охота»: угол прицела уже выставлен при пристрелке,
+ * меняются только условия и расстояние до цели.
+ */
+export function correctionsAt(profile, theta, field, range, clickMrad) {
+  const bc = profile.dragModel === 'G7' ? profile.bcG7 : profile.bc;
+  const p = buildParams({
+    bulletWeightG: profile.bulletWeightG,
+    caliberMm: profile.caliberMm,
+    bc,
+    dragModel: profile.dragModel,
+    muzzleVelocity: profile.muzzleVelocity,
+    sightHeightMm: profile.sightHeightMm,
+    tempC: field.tempC,
+    pressureHpa: field.pressureHpa,
+    humidityPct: field.humidityPct ?? profile.humidityPct,
+    windSpeed: field.windSpeed,
+    windFromDeg: field.windFromDeg,
+    elevationDeg: field.elevationDeg ?? 0,
+    ranges: [range],
+  });
+  const s = integrate(p, theta, [range], 0.0004)[0];
+  const dropMm = -s.y * 1000;
+  const windageMm = s.z * 1000;
+  const mrad = (mm) => mm / Math.max(range, 0.001);
+
+  return {
+    range,
+    dropMm,
+    windageMm,
+    dropMrad: mrad(dropMm),
+    windageMrad: mrad(windageMm),
+    dropClicks: mrad(dropMm) / clickMrad,
+    windageClicks: mrad(windageMm) / clickMrad,
+    velocity: s.v,
+    energy: 0.5 * p.massKg * s.v * s.v,
+    time: s.t,
+    sample: {
+      range,
+      dropMm,
+      windageMm,
+      dropMrad: mrad(dropMm),
+      windageMrad: mrad(windageMm),
+    },
+  };
+}
+
 export function calculate(input) {
   const ranges = input.ranges && input.ranges.length ? input.ranges : [10, 25, 50, 75, 100];
   const p = buildParams(input);

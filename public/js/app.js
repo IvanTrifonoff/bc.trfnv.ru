@@ -1,4 +1,4 @@
-import { calculate, directShot } from './ballistics.js';
+import { calculate, directShot, solveZeroAngle, correctionsAt } from './ballistics.js';
 import { loadCatalog, getCatalog, findCartridge, findRifle } from './catalog.js';
 import {
   loadState,
@@ -7,6 +7,10 @@ import {
   addCustomCartridge,
   addCustomRifle,
   deleteCustom,
+  loadHunt,
+  saveHunt,
+  loadMode,
+  saveMode,
 } from './storage.js';
 import { createTrajectoryChart } from './chart.js';
 import { createReticle } from './reticle.js';
@@ -47,10 +51,20 @@ const NUMERIC_FIELDS = [
 const SECTION_IDS = ['cartridge', 'advanced', 'rifle', 'zero', 'conditions', 'ranges'];
 const COLUMN_IDS = ['velocity', 'energy', 'drop', 'windage', 'time', 'mrad', 'clicks'];
 
+const DEFAULT_HUNT = {
+  tempC: 15,
+  pressureHpa: 1013.25,
+  windSpeed: 0,
+  windFromDeg: 90,
+  distance: 80,
+};
+
 const $ = (id) => document.getElementById(id);
 let chart = null;
 let reticle = null;
+let huntReticle = null;
 let deferredInstall = null;
+let currentMode = 'setup';
 
 function num(id, fallback) {
   const v = parseFloat($(id).value.replace(',', '.'));
@@ -477,6 +491,13 @@ function bindEvents() {
   $('targetSizeCm').addEventListener('input', (e) => reticle && reticle.setOptions({ targetCm: parseFloat(e.target.value) }));
   $('downloadReticleBtn').addEventListener('click', () => reticle && reticle.exportPNG());
   $('printReticleBtn').addEventListener('click', () => window.print());
+  $('modeSetup').addEventListener('click', () => setMode('setup'));
+  $('modeHunt').addEventListener('click', () => setMode('hunt'));
+  $('huntToSetupBtn').addEventListener('click', () => setMode('setup'));
+  $('huntCalcBtn').addEventListener('click', huntCalculate);
+  for (const id of ['huntTempC', 'huntPressure', 'huntWindSpeed', 'huntWindDir', 'huntDistance']) {
+    $(id).addEventListener('input', huntCalculate);
+  }
   $('resetBtn').addEventListener('click', () => {
     if (!confirm('Сбросить все параметры к значениям по умолчанию?')) return;
     applyState(DEFAULT_STATE);
@@ -491,6 +512,104 @@ function registerServiceWorker() {
     navigator.serviceWorker.register('sw.js', { scope: './' }).catch((err) =>
       console.warn('Service worker registration failed:', err),
     );
+  }
+}
+
+function collectHuntState() {
+  return {
+    tempC: num('huntTempC', DEFAULT_HUNT.tempC),
+    pressureHpa: num('huntPressure', DEFAULT_HUNT.pressureHpa),
+    windSpeed: num('huntWindSpeed', DEFAULT_HUNT.windSpeed),
+    windFromDeg: num('huntWindDir', DEFAULT_HUNT.windFromDeg),
+    distance: num('huntDistance', DEFAULT_HUNT.distance),
+  };
+}
+
+function applyHuntState(h) {
+  const s = { ...DEFAULT_HUNT, ...h };
+  fill('huntTempC', s.tempC);
+  fill('huntPressure', s.pressureHpa);
+  fill('huntWindSpeed', s.windSpeed);
+  fill('huntWindDir', s.windFromDeg);
+  fill('huntDistance', s.distance);
+}
+
+function renderHuntProfile(profile) {
+  const custom = loadCustom();
+  const cart = findCartridge(profile.cartridgeId) || custom.cartridges.find((c) => c.id === profile.cartridgeId);
+  const bc = profile.dragModel === 'G7' ? profile.bcG7 : profile.bc;
+  $('huntProfile').innerHTML =
+    `<b>${cart ? cart.name : 'Своя пуля'}</b><br>` +
+    `<span class="muted">Пуля ${fmt(profile.bulletWeightG, 2)} г · Ø ${fmt(profile.caliberMm)} мм · BC ${profile.dragModel} ${fmt(bc, 3)}</span><br>` +
+    `<span class="muted">Скорость ${fmt(profile.muzzleVelocity)} м/с · прицел ${fmt(profile.sightHeightMm)} мм</span><br>` +
+    `<b>Пристрелка ${fmt(profile.zeroRange)} м</b> <span class="muted">(без ветра)</span>`;
+}
+
+function huntCalculate() {
+  const h = collectHuntState();
+  if (!(h.distance > 0)) {
+    $('huntError').hidden = false;
+    $('huntError').textContent = 'Укажите расстояние до цели больше нуля.';
+    return;
+  }
+  $('huntError').hidden = true;
+
+  const profile = { ...(loadState() || DEFAULT_STATE), windSpeed: 0 };
+  const theta = solveZeroAngle(profile);
+  const c = correctionsAt(profile, theta, {
+    tempC: h.tempC,
+    pressureHpa: h.pressureHpa,
+    humidityPct: profile.humidityPct,
+    windSpeed: h.windSpeed,
+    windFromDeg: h.windFromDeg,
+    elevationDeg: 0,
+  }, h.distance, profile.clickMrad || 0.1);
+
+  $('huntDistanceLabel').textContent = fmt(h.distance) + ' м';
+  $('huntCond').textContent = fmt(h.tempC) + ' °C · ' + fmt(h.windSpeed) + ' м/с · ' + fmt(h.windFromDeg, 0) + '°';
+
+  $('huntDropDir').textContent = c.dropMm >= 0 ? 'вверх' : 'вниз';
+  $('huntDropValue').textContent = fmt(Math.abs(c.dropMm));
+  $('huntDropMrad').textContent = fmt(Math.abs(c.dropMrad), 2);
+  $('huntDropClicks').textContent = fmt(Math.abs(c.dropClicks), 0);
+
+  $('huntWindDirLabel').textContent = c.windageMm >= 0 ? 'влево' : 'вправо';
+  $('huntWindValue').textContent = fmt(Math.abs(c.windageMm));
+  $('huntWindMrad').textContent = fmt(Math.abs(c.windageMrad), 2);
+  $('huntWindClicks').textContent = fmt(Math.abs(c.windageClicks), 0);
+
+  $('huntExtra').innerHTML =
+    `<span>Скорость ${fmt(c.velocity)} м/с</span>` +
+    `<span>Энергия ${fmt(c.energy)} Дж</span>` +
+    `<span>Время ${fmt(c.time, 3)} с</span>`;
+
+  renderHuntProfile(profile);
+  if (huntReticle) {
+    huntReticle.setData([c.sample], {
+      clickMrad: profile.clickMrad || 0.1,
+      zeroRange: profile.zeroRange,
+      dragModel: profile.dragModel,
+      bc,
+    });
+    huntReticle.setRange(h.distance);
+    huntReticle.setOptions({ reticleType: 'mildot', targetCm: 10 });
+  }
+  saveHunt(h);
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  saveMode(mode);
+  const hunt = mode === 'hunt';
+  $('setupView').hidden = hunt;
+  $('huntView').hidden = !hunt;
+  $('modeSetup').classList.toggle('active', !hunt);
+  $('modeHunt').classList.toggle('active', hunt);
+  if (hunt) {
+    huntCalculate();
+    if (huntReticle) huntReticle.resize();
+  } else if (chart) {
+    chart.resize();
   }
 }
 
@@ -514,6 +633,8 @@ async function init() {
   chart = createTrajectoryChart($('chart'), $('chartTooltip'));
   reticle = createReticle($('reticleCanvas'));
   reticle.resize();
+  huntReticle = createReticle($('huntReticle'));
+  huntReticle.resize();
   bindEvents();
   bindDialogs();
   bindInstall();
@@ -523,10 +644,12 @@ async function init() {
   const state = loadState() || DEFAULT_STATE;
   populateSelects(state);
   applyState(state);
+  applyHuntState(loadHunt());
   await loadCatalog();
   populateSelects(collectState());
   chart.resize();
   calculateAndRender();
+  setMode(loadMode() === 'hunt' ? 'hunt' : 'setup');
 }
 
 init();

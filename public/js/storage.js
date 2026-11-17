@@ -2,6 +2,8 @@
 
 const KEY_STATE = 'ballistics.state.v1';
 const KEY_CUSTOM = 'ballistics.custom.v1';
+const KEY_HUNT = 'ballistics.hunt.v1';
+const KEY_MODE = 'ballistics.mode.v1';
 
 function read(key, fallback) {
   try {
@@ -22,6 +24,10 @@ function write(key, value) {
 
 export const loadState = () => read(KEY_STATE, null);
 export const saveState = (state) => write(KEY_STATE, state);
+export const loadHunt = () => read(KEY_HUNT, null);
+export const saveHunt = (hunt) => write(KEY_HUNT, hunt);
+export const loadMode = () => read(KEY_MODE, 'setup');
+export const saveMode = (mode) => write(KEY_MODE, mode);
 
 export const loadCustom = () =>
   read(KEY_CUSTOM, { cartridges: [], rifles: [] });

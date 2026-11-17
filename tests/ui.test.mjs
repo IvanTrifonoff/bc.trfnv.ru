@@ -29,6 +29,9 @@ test('DOM: все поля NUMERIC_FIELDS и справочники присут
     'cartridgeSelect', 'rifleSelect', 'rangeFrom', 'rangeTo', 'rangeStep',
     'resultTable', 'chart', 'themeToggle', 'sec-cartridge', 'sec-conditions',
     'col-drop', 'col-clicks',
+    'modeSetup', 'modeHunt', 'setupView', 'huntView',
+    'huntTempC', 'huntPressure', 'huntWindSpeed', 'huntWindDir', 'huntDistance',
+    'huntProfile', 'huntDistanceLabel', 'huntDropValue', 'huntWindValue', 'huntReticle',
   ];
   const missing = fields.filter((id) => !doc.getElementById(id));
   assert.deepEqual(missing, []);
